@@ -1,0 +1,40 @@
+{
+  "name": "TalRegistry",
+  "version": "1.0.0",
+  "description": "TalRegistry smart contracts",
+  "main": "truffle.js",
+  "scripts": {
+    "test": "./tests.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@bitbucket.org:ukgamesfund/blockchain.git"
+  },
+  "keywords": [
+    "solidity",
+    "ethereum",
+    "smart",
+    "contracts",
+    "security",
+    "zeppelin"
+  ],
+  "author": "Mihai Cimpoesu <mihai@dltlab.io>",
+  "license": "MIT",
+  "homepage": "http://ukgamesfund.com",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "truffle-hdwallet-provider": "0.0.3"
+  },
+  "devDependencies": {
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-stage-2": "^6.18.0",
+    "babel-preset-stage-3": "^6.17.0",
+    "babel-register": "^6.23.0",
+    "coveralls": "^2.13.1",
+    "chai": "latest",
+    "ethereumjs-testrpc": "^3.0.2",
+    "mocha-lcov-reporter": "^1.3.0",
+    "solidity-coverage": "^0.1.0",
+    "truffle": "3.2.2"
+  }
+}

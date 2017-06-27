@@ -1,0 +1,8 @@
+*.swp
+*.swo
+node_modules/
+build/
+.DS_Store/
+.idea/
+mainnet/
+utilities/*.json*
