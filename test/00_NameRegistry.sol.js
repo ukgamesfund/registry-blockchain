@@ -25,8 +25,11 @@ contract('00_NameRegistry.sol', function(rpc_accounts) {
 
 		await registry.set(CONST.GOLD_ACCOUNT, ac.gold, {from:ac.admin});
 
-		let goldAccountName = hex2str(await registry.getNameByAddress(ac.gold));
-		assert.equal(goldAccountName, CONST.GOLD_ACCOUNT);
+		let gold_account_name = hex2str(await registry.get_name_by_address(ac.gold));
+		assert.equal(gold_account_name, CONST.GOLD_ACCOUNT);
+
+		let gold_address = await registry.get_address_by_name(CONST.GOLD_ACCOUNT);
+		assert.equal(gold_address, ac.gold);
 	})
 
 
