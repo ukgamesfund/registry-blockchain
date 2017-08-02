@@ -11,7 +11,7 @@ contract Project is Ownable {
 	event LogInitialConfirmation(uint8 member_index, Vote confirmation);
 
 	event LogProjectConfirmed();
-	event LogProjectPaused();
+	event LogProjectSuspended();
 	event LogProjectRejected();
 	event LogProjectTerminated();
 
@@ -22,10 +22,10 @@ contract Project is Ownable {
 
 	enum Status {
 		None,
-		Created,  // this is the initial status when created
+		Created,   // this is the initial status when created
 		Confirmed, // this is the main Active status
 		Rejected,  // this is the terminal state when initially rejected
-		Paused,    // this only happens when the gold account pauses the project
+		Suspended, // this only happens when the gold account pauses the project
 		Terminated // this happens by passing a resolution
 	}
 
