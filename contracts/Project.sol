@@ -46,7 +46,7 @@ contract Project is Ownable {
 		uint8  creator;        // the member who initiated the resolution, or 0xFF in the case of the GOLD account
 		uint32 expiry;
 
-		bytes []  transactions; // an array of raw transactions that need to pass atomically as per the resolution
+		bytes[] transactions;  // an array of raw transactions that need to pass atomically as per the resolution
 	}
 
 	struct Checkpoint {
@@ -66,6 +66,7 @@ contract Project is Ownable {
 	// the initial project confirmations
 	mapping (uint8 => Vote) member_confirmations;
 	uint8 public member_confirmation_counter = 0;
+	uint8 public silver_member_counter = 0;
 
 	// the different token holdings
 	mapping (uint8 => Checkpoint[]) token_balances;
@@ -97,6 +98,10 @@ contract Project is Ownable {
 				sodium:0
 			});
 			token_balances[i].push(cp);
+
+			if(_silver[i] > 0) {
+				silver_member_counter += 1;
+			}
 		}
 
 		LogProjectCreated(project_initiator, project_name);
@@ -227,7 +232,10 @@ contract Project is Ownable {
 
 			Checkpoint memory mem_cp = Checkpoint(0,0,0,0);
 			mem_cp.timestamp = uint32(now);
-			if(token_type == TokenType.Silver) mem_cp.silver = _value;
+			if(token_type == TokenType.Silver) {
+				mem_cp.silver = _value;
+				silver_member_counter += 1;
+			}
 			if(token_type == TokenType.Copper) mem_cp.copper = _value;
 			if(token_type == TokenType.Sodium) mem_cp.sodium = _value;
 
@@ -235,7 +243,13 @@ contract Project is Ownable {
 		} else {
 
 			Checkpoint storage storage_cp = checkpoints[checkpoints.length-1];
-			if(token_type == TokenType.Silver) storage_cp.silver = _value;
+
+			if(token_type == TokenType.Silver) {
+				if(storage_cp.silver == 0 && _value > 0) silver_member_counter += 1;
+				if(storage_cp.silver > 0 && _value == 0) silver_member_counter -= 1;
+
+				storage_cp.silver = _value;
+			}
 			if(token_type == TokenType.Copper) storage_cp.copper = _value;
 			if(token_type == TokenType.Sodium) storage_cp.sodium = _value;
 		}
@@ -249,6 +263,7 @@ contract Project is Ownable {
 
 	function member_initial_response(uint8 member_index, Vote confirmation)
 	only_in_deployed_status
+	only_silver_token_holders
 	public {
 		require(msg.sender == project_members[member_index]);
 		require(member_confirmations[member_index] == Vote.None);
@@ -269,17 +284,16 @@ contract Project is Ownable {
 		if (confirmation == Vote.Confirm) {
 			member_confirmation_counter += 1;
 			// if everybody accepted to be members we can proceed to activate the project
-			if (member_confirmation_counter == project_members.length) {
+			if (member_confirmation_counter == silver_member_counter) {
 				project_status = Status.Confirmed;
 				LogProjectConfirmed();
 			}
 		}
 	}
 
-	/*
-
 	function create_resolution(bytes transactions) public
-	only_silver_token_holders {
+	only_silver_token_holders
+	only_in_confirmed_status {
 
 	}
 
@@ -288,7 +302,6 @@ contract Project is Ownable {
 
 
 	}
-	*/
 
 	//--------------------------------------- TEST functions --------------------------------------------------------
 

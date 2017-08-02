@@ -33,18 +33,19 @@ contract('01_Project.sol', function(rpc_accounts) {
 		registry = await NameRegistry.new({from: ac.admin});
 		await registry.set(CONST.GOLD_ACCOUNT, ac.gold, {from:ac.admin});
 
-		let members = [ac.member1, ac.member2];
-		let silver = [11, 2];
-		let copper = [4, 5];
+		let members = [ac.member1, ac.member2, ac.member3];
+		let silver = [11, 2, 0];
+		let copper = [4, 5, 23];
 
 		project = await Project.new(registry.address, 'project2', members, silver, copper, {from: ac.member1})
 	})
 
 
-	it('should be able to record membership confirmation ONLY from the added members', async () => {
+	it('should be able to record Reject as membership confirmation', async () => {
 
 		let id1 = await project.get_member_index(ac.member1)
 		let id2 = await project.get_member_index(ac.member2)
+		let id3 = await project.get_member_index(ac.member3)
 
 		let rec1 = await project.member_initial_response(id1.toNumber(), Vote.Confirm, {from: ac.member1})
 		let log1 = rec1.logs

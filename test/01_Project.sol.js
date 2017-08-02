@@ -38,9 +38,9 @@ contract('01_Project.sol', function(rpc_accounts) {
 
 	it('should be able to deploy a project contract with 2 members', async () => {
 
-		let members = [ac.member1, ac.member2];
-		let silver = [11, 2];
-		let copper = [4, 5];
+		let members = [ac.member1, ac.member2, ac.member3];
+		let silver = [11, 2, 0];
+		let copper = [4, 5, 23];
 
 		project = await Project.new(registry.address, 'project1', members, silver, copper, {from: ac.member1})
 
@@ -48,7 +48,10 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(project_name, 'project1');
 
 		let counter = await project.get_project_members_count();
-		assert.equal(counter.toNumber(), 2);
+		assert.equal(counter.toNumber(), 3);
+
+		let silver_member_counter = await project.silver_member_counter();
+		assert.equal(silver_member_counter.toNumber(), 2);
 
 		let initiator = await project.project_initiator();
 		assert.equal(initiator, ac.member1);
@@ -61,7 +64,6 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(m1_c.toNumber(), 4);
 		assert.equal(m1_n.toNumber(), 0);
 
-
 		let m2_s = await project.get_silver_tokens(ac.member2);
 		let m2_c = await project.get_copper_tokens(ac.member2);
 		let m2_n = await project.get_sodium_tokens(ac.member2);
@@ -71,7 +73,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(m2_n.toNumber(), 0);
 
 		// querying for an un-existing member should throw
-		await expectThrow(project.get_silver_tokens(ac.member3));
+		await expectThrow(project.get_silver_tokens(ac.member4));
 	})
 	
 	it('should still be in the Status.Created', async () => {
@@ -85,21 +87,21 @@ contract('01_Project.sol', function(rpc_accounts) {
 		let id1 = await project.get_member_index(ac.member1)
 		let id2 = await project.get_member_index(ac.member2)
 		let id3 = await project.get_member_index(ac.member3)
+		let id4 = await project.get_member_index(ac.member4)
 
-		// member3 is not a member of this project, this should be reflected by querying his index
-		assert.equal(id3.toNumber(), CONST.NOT_A_MEMBER);
+		// member4 is not a member of this project, this should be reflected by querying his index
+		assert.equal(id4.toNumber(), CONST.NOT_A_MEMBER);
 
-		// member_index = 5 doesn't exist and it should not be allowed to send a transaction
-		await expectThrow(project.member_initial_response(5, Vote.Confirm), {from: ac.member5})
+		// member_index = 4 doesn't exist and it should not be allowed to send a transaction
+		await expectThrow(project.member_initial_response(4, Vote.Confirm), {from: ac.member4})
 		let counter = await project.member_confirmation_counter()
 		assert.equal(counter.toNumber(), 0);
 
-		// member_index = 5 doesn't exist; an existing member should not be allowed to accept a different index
-		await expectThrow(project.member_initial_response(5, Vote.Confirm, {from: ac.member1}))
+		// member_index = 4 doesn't exist; an existing member should not be allowed to accept a different index
+		await expectThrow(project.member_initial_response(4, Vote.Confirm, {from: ac.member1}))
 		counter = await project.member_confirmation_counter()
 		assert.equal(counter.toNumber(), 0);
 
-		// member_index = 5 doesn't exist; an existing member should not be allowed to confirm a different index
 		// member1 has index 0, it should not be able to call with index = 1
 		await expectThrow(project.member_initial_response(1, Vote.Confirm, {from: ac.member1}))
 		counter = await project.member_confirmation_counter()
