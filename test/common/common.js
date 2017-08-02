@@ -18,9 +18,16 @@ function log(_obj) {
 	console.log(JSON.stringify(_obj, null, 2));
 }
 
-const ProjectStatus = {
+const TokenType = {
 	None : 0,
-	Deployed : 1,
+	Silver : 1,
+	Copper : 2,
+	Sodium : 3
+}
+
+const Status = {
+	None : 0,
+	Created : 1,
 	Confirmed : 2,
 	Rejected : 3,
 	Paused: 4,
@@ -50,6 +57,7 @@ module.exports = {
 	accounts: accounts,
 	log: log,
 
-	ProjectStatus: ProjectStatus,
-	Vote: Vote
+	Status: Status,
+	Vote: Vote,
+	TokenType: TokenType
 };

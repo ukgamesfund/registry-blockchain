@@ -1,14 +1,12 @@
-const assertJump = require('./helpers/assertJump');
-const timer = require('./helpers/timer');
-const hex2str = require('./helpers/hex2string');
 
-import expectThrow from './helpers/expectThrow';
+let Promise = require('bluebird');
+import sleep from 'sleep-promise';
+
 
 import {
 	accounts, log,
 	CONST,
-	ProjectStatus,
-	Vote,
+	Status,Vote,TokenType,
 }  from './common/common';
 
 let NameRegistry = artifacts.require('../contracts/NameRegistry.sol');
@@ -23,6 +21,13 @@ contract('01_Project.sol', function(rpc_accounts) {
 
 	let registry;
 	let project;
+
+	let pGetBlock = Promise.promisify(web3.eth.getBlock);
+
+	async function pGetLatestTimestamp() {
+		let _block = await pGetBlock('latest')
+		return Promise.resolve(parseInt(_block.timestamp));
+	}
 
 	it('should make the initial setup with no exception thrown', async () => {
 		registry = await NameRegistry.new({from: ac.admin});
@@ -62,7 +67,53 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(counter.toNumber(), 1);
 
 		let project_status = await project.get_project_status();
-		assert.equal(project_status.toNumber(), ProjectStatus.Rejected);
+		assert.equal(project_status.toNumber(), Status.Rejected);
+	})
+
+	it('should be able to test setting token value using the \'test_set_token_value_now\' function', async () => {
+
+		let id1 = await project.get_member_index(ac.member1);
+		let ts1 = await pGetLatestTimestamp();
+
+		await sleep(1000);
+		await project.test_set_token_value_now(id1, TokenType.Silver, 32);
+
+		let silver1 = await project.get_silver_tokens(ac.member1);
+		assert.equal(silver1.toNumber(), 32);
+
+		// let's now check if we can get the old value back
+		silver1 = await project.get_tokens(ac.member1, TokenType.Silver, ts1);
+		assert.equal(silver1.toNumber(), 11);
+
+		// now explicitly query at ts2
+		let ts2 = await pGetLatestTimestamp();
+		silver1 = await project.get_tokens(ac.member1, TokenType.Silver, ts2);
+		assert.equal(silver1.toNumber(), 32);
+	})
+
+	it('should be able to test setting token value multiple times - testing binary search', async () => {
+		let id1 = await project.get_member_index(ac.member1);
+
+		let tss = [];
+		for(let i=0; i<5; i++) {
+			await project.test_set_token_value_now(id1, TokenType.Silver, i*100);
+			let ts1 = await pGetLatestTimestamp();
+			await project.test_set_token_value_now(id1, TokenType.Copper, i*200);
+			let ts2 = await pGetLatestTimestamp();
+			await project.test_set_token_value_now(id1, TokenType.Sodium, i*300);
+			let ts3 = await pGetLatestTimestamp();
+			tss.push([ts1,ts2,ts3]);
+			await sleep(1000);
+		}
+
+		for(let i=0; i<5; i++) {
+			let value1 = await project.get_tokens(ac.member1, TokenType.Silver, tss[i][0]);
+			let value2 = await project.get_tokens(ac.member1, TokenType.Copper, tss[i][1]);
+			let value3 = await project.get_tokens(ac.member1, TokenType.Sodium, tss[i][2]);
+			assert.equal(value1.toNumber(), i*100);
+			assert.equal(value2.toNumber(), i*200);
+			assert.equal(value3.toNumber(), i*300);
+		}
 	})
 
 

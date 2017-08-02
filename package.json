@@ -23,6 +23,7 @@
   "homepage": "http://ukgamesfund.com",
   "dependencies": {
     "bluebird": "^3.5.0",
+    "sleep-promise": "^2.0.0",
     "truffle-hdwallet-provider": "0.0.3"
   },
   "devDependencies": {

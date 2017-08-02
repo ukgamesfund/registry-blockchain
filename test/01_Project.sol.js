@@ -1,14 +1,11 @@
-const assertJump = require('./helpers/assertJump');
-const timer = require('./helpers/timer');
-const hex2str = require('./helpers/hex2string');
 
+const hex2str = require('./helpers/hex2string');
 import expectThrow from './helpers/expectThrow';
-import expectThrowUnPayable from './helpers/expectThrowUnPayable';
 
 import {
 	accounts, log,
 	CONST,
-	ProjectStatus,
+	Status,
 	Vote,
 }  from './common/common';
 
@@ -77,10 +74,10 @@ contract('01_Project.sol', function(rpc_accounts) {
 		await expectThrow(project.get_silver_tokens(ac.member3));
 	})
 	
-	it('should still be in the ProjectStatus.Deployed', async () => {
+	it('should still be in the Status.Created', async () => {
 
 		let project_status = await project.get_project_status();
-		assert.equal(project_status.toNumber(), ProjectStatus.Deployed);
+		assert.equal(project_status.toNumber(), Status.Created);
 	})
 
 	it('should be able to record membership confirmation ONLY from the added members', async () => {
@@ -129,7 +126,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(counter.toNumber(), 2);
 
 		let project_status = await project.get_project_status();
-		assert.equal(project_status.toNumber(), ProjectStatus.Confirmed);
+		assert.equal(project_status.toNumber(), Status.Confirmed);
 	})
 
 
