@@ -297,9 +297,9 @@ contract Project is Ownable {
 
 	}
 
+	// TODO figure out security of resolution transactions
 	function convert_tokens(uint8 member_index, uint32 token_number, TokenType type_from, TokenType type_to) {
-		// TODO figure out security of resolution transactions
-
+		require(member_index != NOT_A_MEMBER);
 
 	}
 

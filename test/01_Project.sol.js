@@ -36,7 +36,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(gold_address, ac.gold);
 	})
 
-	it('should be able to deploy a project contract with 2 members', async () => {
+	it('should be able to deploy a project contract with 3 members - 2 Silver token holders', async () => {
 
 		let members = [ac.member1, ac.member2, ac.member3];
 		let silver = [11, 2, 0];
@@ -82,7 +82,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(project_status.toNumber(), Status.Created);
 	})
 
-	it('should be able to record membership confirmation ONLY from the added members', async () => {
+	it('should be able to record membership confirmation ONLY from the Silver token holders', async () => {
 
 		let id1 = await project.get_member_index(ac.member1)
 		let id2 = await project.get_member_index(ac.member2)
@@ -91,6 +91,9 @@ contract('01_Project.sol', function(rpc_accounts) {
 
 		// member4 is not a member of this project, this should be reflected by querying his index
 		assert.equal(id4.toNumber(), CONST.NOT_A_MEMBER);
+
+		expectThrow(project.member_initial_response(id3.toNumber(), Vote.Confirm), {from: ac.member3});
+		expectThrow(project.member_initial_response(id3.toNumber(), Vote.Reject), {from: ac.member3});
 
 		// member_index = 4 doesn't exist and it should not be allowed to send a transaction
 		await expectThrow(project.member_initial_response(4, Vote.Confirm), {from: ac.member4})
