@@ -2,10 +2,11 @@ pragma solidity ^0.4.11;
 
 
 import {Ownable} from '../zeppelin/contracts/ownership/Ownable.sol';
+import {ReentrancyGuard} from '../zeppelin/contracts/ReentrancyGuard.sol';
 import {NameRegistry} from './NameRegistry.sol';
 
 
-contract Project is Ownable {
+contract Project is Ownable, ReentrancyGuard {
 
 	event LogProjectCreated(address initiator, string project_name);
 	event LogInitialConfirmation(uint8 member_index, Vote confirmation);
@@ -20,7 +21,7 @@ contract Project is Ownable {
 
 	NameRegistry public registry = NameRegistry(0x0);
 
-	bytes32 public constant ADMIN_ACCOUNT = "gold.account";
+	bytes32 public constant GOLD_ACCOUNT = "gold.account";
 	uint8 public constant NOT_A_MEMBER = 0xff;
 
 	enum Status {
@@ -71,6 +72,8 @@ contract Project is Ownable {
 		int32 silver_token_rejections;
 		int32 silver_token_total;
 
+		uint8 majority_percentage;
+
 		uint8 transaction_counter;
 		mapping(uint8 => bytes) transactions;// an array of raw transactions that need to pass atomically as per the resolution
 		mapping(uint8 => Vote) votes;
@@ -89,6 +92,7 @@ contract Project is Ownable {
 	string  public project_name;
 	address public project_initiator;
 	address []     project_members;
+	int32 public   project_allocation_cap = 1000000;
 
 	int32 public  silver_token_counter = 0;
 	int32 public  copper_token_counter = 0;
@@ -96,6 +100,7 @@ contract Project is Ownable {
 
 	// the different token holdings
 	mapping (uint8 => Checkpoint[]) token_balances;
+	mapping (uint8 => bool) is_member_suspended;
 
 	// data about resolutions
 	uint8 public res_majority_percentage = 0;
@@ -122,7 +127,7 @@ contract Project is Ownable {
 
 		// transfer admin rights to the GOLD account
 		registry = NameRegistry(_registry);
-		address gold = registry.get(ADMIN_ACCOUNT);
+		address gold = registry.get(GOLD_ACCOUNT);
 		transferOwnership(gold);
 
 		// store the membership details
@@ -162,7 +167,7 @@ contract Project is Ownable {
 	}
 
 	modifier only_gold_account {
-		require(msg.sender == registry.get(ADMIN_ACCOUNT));
+		require(msg.sender == registry.get(GOLD_ACCOUNT));
 		_;
 	}
 
@@ -173,9 +178,19 @@ contract Project is Ownable {
 
 	modifier only_silver_and_gold_accounts {
 		require(
-			msg.sender == registry.get(ADMIN_ACCOUNT) ||
+			msg.sender == registry.get(GOLD_ACCOUNT) ||
 			get_silver_tokens(msg.sender)>0
 		);
+		_;
+	}
+
+	modifier only_active_members(uint8 member_index) {
+		if(member_index == NOT_A_MEMBER) {
+			require(msg.sender == registry.get(GOLD_ACCOUNT));
+		} else {
+			require(msg.sender == project_members[member_index]);
+			require(is_member_suspended[member_index]==false);
+		}
 		_;
 	}
 
@@ -184,7 +199,7 @@ contract Project is Ownable {
 	function res_get_passed_or_rejected(uint32 res_id) public constant returns (ResStatus){
 
 		Resolution storage res = resolutions[res_id];
-		int32 quorum_token_count = res_majority_percentage * res.silver_token_total;
+		int32 quorum_token_count = res.majority_percentage * res.silver_token_total;
 
 		if(res.silver_token_confirmations * 100 >= quorum_token_count) {
 			return ResStatus.Passed;
@@ -209,6 +224,10 @@ contract Project is Ownable {
 		}
 
 		return uint8(NOT_A_MEMBER);
+	}
+
+	function get_is_member_suspended(uint8 member_index) public constant returns(bool suspended) {
+		return is_member_suspended[member_index];
 	}
 
 	function get_project_status() public constant returns(uint8 _status) {
@@ -296,24 +315,38 @@ contract Project is Ownable {
 		project_status = status;
 	}
 
+	function gold_set_member_status(uint8 member_index, bool suspended) public
+	only_in_confirmed_status
+	only_gold_account {
+		require(member_index < project_members.length);
+		is_member_suspended[member_index] = suspended;
+	}
+
+	// TODO:  should we have this function ?
+	function gold_set_resolution_status(uint32 res_id, ResStatus status) public
+	only_in_confirmed_status
+	only_gold_account {
+		require(res_id < resolutions.length);
+		resolutions[res_id].status = status;
+	}
+
 	//--------------------------------------- resolution functions -----------------------------------------------------
 
-	function res_create_resolution(uint8 initiator_member_index) public
+	function res_create_resolution(uint8 sender_index) public
+	only_active_members(sender_index)
 	only_silver_and_gold_accounts
 	only_in_confirmed_status returns (uint32 res_id) {
 
-		uint8 member_index = get_member_index(msg.sender);
-		require(member_index != NOT_A_MEMBER);
-
 		Resolution memory res = Resolution({
-			initiator: initiator_member_index,
+			initiator: sender_index,
 			status: ResStatus.Created,
 			created: uint32(now),
 			expiry: 0,
 			silver_token_total:0,
 			silver_token_confirmations: 0,
 			silver_token_rejections: 0,
-			transaction_counter: 0
+			transaction_counter: 0,
+			majority_percentage: res_majority_percentage
 		});
 		resolutions.push(res);
 	
@@ -322,23 +355,25 @@ contract Project is Ownable {
 	}
 
 	// only the data part of the tx is needed, the 'to' part is 'this'
-	function res_add_transaction(uint32 res_id, bytes tx_data) public
+	function res_add_transaction(uint8 sender_index, uint32 res_id, bytes tx_data) public
+	only_active_members(sender_index)
+	only_silver_and_gold_accounts
 	only_in_confirmed_status {
 
 		require(res_id < resolutions.length);
 		require(resolutions[res_id].status == ResStatus.Created);
-		require(resolutions[res_id].initiator == msg.sender);
 
 		Resolution storage res = resolutions[res_id];
 		res.transactions[res.transaction_counter++] = tx_data;
 	}
 
-	function res_commit_resolution(uint32 res_id) public
+	function res_commit_resolution(uint8 sender_index, uint32 res_id) public
+	only_active_members(sender_index)
+	only_silver_and_gold_accounts
 	only_in_confirmed_status {
 
 		require(res_id < resolutions.length);
 		require(resolutions[res_id].status == ResStatus.Created);
-		require(resolutions[res_id].initiator == msg.sender);
 
 		resolutions[res_id].expiry = uint32(now + 7 days);
 		resolutions[res_id].status = ResStatus.Committed;
@@ -346,16 +381,12 @@ contract Project is Ownable {
 		LogResolutionChange(res_id, ResStatus.Committed);
 	}
 
-	function res_cancel_resolution(uint32 res_id) public
+	function res_cancel_resolution(uint8 sender_index, uint32 res_id) public
+	only_active_members(sender_index)
+	only_silver_and_gold_accounts
 	only_in_confirmed_status {
 
 		require(res_id < resolutions.length);
-
-		require(
-			(resolutions[res_id].initiator == msg.sender) ||
-			(msg.sender == registry.get(ADMIN_ACCOUNT))
-		);
-
 		require(
 			resolutions[res_id].expiry > 0 &&
 			resolutions[res_id].expiry < now
@@ -399,7 +430,8 @@ contract Project is Ownable {
 		LogResolutionChange(res_id, ResStatus.Committed);
 	}
 
-	function res_vote_resolution(uint32 res_id, uint8 member_index, Vote vote) public
+	function res_vote_resolution(uint8 sender_index, uint32 res_id, Vote vote) public
+	only_active_members(sender_index)
 	only_in_confirmed_status
 	only_silver_token_holders {
 
@@ -412,17 +444,17 @@ contract Project is Ownable {
 
 		Resolution storage res = resolutions[res_id];
 
-		require(msg.sender == project_members[member_index]);
-		require(res.votes[member_index] == Vote.None);
+		require(msg.sender == project_members[sender_index]);
+		require(res.votes[sender_index] == Vote.None);
 		require(
 			vote == Vote.Confirm ||
 			vote == Vote.Reject
 		);
 
 		// record the vote
-		res.votes[member_index] = vote;
+		res.votes[sender_index] = vote;
 
-		Checkpoint memory cp = get_checkpoint_at(member_index, res.created);
+		Checkpoint memory cp = get_checkpoint_at(sender_index, res.created);
 		if(vote == Vote.Confirm) {
 			res.silver_token_confirmations += cp.silver;
 		}
@@ -439,7 +471,8 @@ contract Project is Ownable {
 		}
 	}
 
-	function res_execute_resolution(uint32 res_id) public
+	function res_execute_resolution(uint8 sender_index, uint32 res_id) public
+	only_active_members(sender_index)
 	only_silver_and_gold_accounts
 	only_in_confirmed_status {
 
@@ -468,12 +501,14 @@ contract Project is Ownable {
 		_;
 	}
 
-	function res_set_token_value(uint32 res_id, uint8 member_index, TokenType token_type, int32 _value)
+	function res_set_token_value(uint32 res_id, uint8 member_index, TokenType token_type, int32 tokens_number)
+	only_in_confirmed_status
+	nonReentrant
 	only_executing_resolution(res_id) public { // this is only 'public' so we can get the data to add to the resolution
 
 		require(member_index >= 0);
 		require(member_index < project_members.length);
-		require(_value >= 0);
+		require(tokens_number >= 0);
 
 		Checkpoint[] storage checkpoints = token_balances[member_index];
 		Checkpoint memory cp = Checkpoint(0,0,0,0);
@@ -485,28 +520,81 @@ contract Project is Ownable {
 		cp.timestamp = uint32(now);
 
 		if(token_type == TokenType.Silver) {
-			silver_token_counter += (_value - cp.silver);
-			cp.silver = _value;
+			silver_token_counter += (tokens_number - cp.silver);
+			cp.silver = tokens_number;
 		}
 		if(token_type == TokenType.Copper) {
-			copper_token_counter += (_value - cp.copper);
-			cp.copper = _value;
+			copper_token_counter += (tokens_number - cp.copper);
+			cp.copper = tokens_number;
 		}
 		if(token_type == TokenType.Sodium) {
-			sodium_token_counter += (_value - cp.sodium);
-			cp.sodium = _value;
+			sodium_token_counter += (tokens_number - cp.sodium);
+			cp.sodium = tokens_number;
 		}
 
+		require(silver_token_counter + copper_token_counter <= project_allocation_cap);
 		checkpoints.push(cp);
 	}
 
-	/*
-	function res_convert_tokens(uint8 member_index, uint32 token_number, TokenType type_from, TokenType type_to)
-	only_in_confirmed_status {
-		require(member_index != NOT_A_MEMBER);
+	function res_convert_tokens(
+		uint32 res_id,
+		uint8 member_index,
+		int32 tokens_number,
+		TokenType from_type,
+		TokenType to_type)
+	only_in_confirmed_status
+	nonReentrant
+	only_executing_resolution(res_id) public {
 
+		require(member_index != NOT_A_MEMBER);
+		require(member_index >= 0);
+		require(member_index < project_members.length);
+
+		require(from_type == TokenType.Silver || from_type == TokenType.Copper);
+		require(from_type != to_type);
+
+		Checkpoint[] storage checkpoints = token_balances[member_index];
+		require(checkpoints.length > 0);
+
+		Checkpoint memory cp = checkpoints[checkpoints.length-1];
+		cp.timestamp = uint32(now);
+
+		if(from_type == TokenType.Silver) {
+			silver_token_counter -= tokens_number;
+			cp.silver -= tokens_number;
+		}
+		else {
+			copper_token_counter -= tokens_number;
+			cp.copper -= tokens_number;
+		}
+
+
+		if(to_type == TokenType.Silver) {
+			silver_token_counter += tokens_number;
+			cp.silver += tokens_number;
+		}
+		else if(to_type == TokenType.Copper) {
+			copper_token_counter += tokens_number;
+			cp.copper += tokens_number;
+		}
+		else {
+			sodium_token_counter += tokens_number;
+			cp.sodium += tokens_number;
+		}
+
+		require(silver_token_counter + copper_token_counter <= project_allocation_cap);
+		checkpoints.push(cp);
 	}
-	*/
+
+	function res_change_majority_percentage(uint32 res_id, uint8 new_majority_percentage)
+	only_in_confirmed_status
+	nonReentrant
+	only_executing_resolution(res_id) public {
+		require(new_majority_percentage > 0);
+		require(new_majority_percentage <= 100);
+
+		res_majority_percentage = new_majority_percentage;
+	}
 
 	//--------------------------------------- TEST functions --------------------------------------------------------
 
