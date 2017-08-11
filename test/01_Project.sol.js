@@ -22,6 +22,8 @@ contract('01_Project.sol', function(rpc_accounts) {
 	let registry;
 	let project;
 
+	let VOTING_MAJ_PERCENTAGE = 60;
+
 	it('should be able to deploy the name registry and set initial state', async () => {
 		registry = await NameRegistry.new({from: ac.admin});
 
@@ -42,7 +44,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		let silver = [11, 2, 0];
 		let copper = [4, 5, 23];
 
-		project = await Project.new(registry.address, 'project1', members, silver, copper, {from: ac.member1})
+		project = await Project.new(registry.address, VOTING_MAJ_PERCENTAGE, 'project1', members, silver, copper, {from: ac.member1})
 
 		let project_name = await project.project_name();
 		assert.equal(project_name, 'project1');
@@ -92,8 +94,8 @@ contract('01_Project.sol', function(rpc_accounts) {
 		// member4 is not a member of this project, this should be reflected by querying his index
 		assert.equal(id4.toNumber(), CONST.NOT_A_MEMBER);
 
-		expectThrow(project.member_initial_response(id3.toNumber(), Vote.Confirm), {from: ac.member3});
-		expectThrow(project.member_initial_response(id3.toNumber(), Vote.Reject), {from: ac.member3});
+		await expectThrow(project.member_initial_response(id3.toNumber(), Vote.Confirm), {from: ac.member3});
+		await expectThrow(project.member_initial_response(id3.toNumber(), Vote.Reject), {from: ac.member3});
 
 		// member_index = 4 doesn't exist and it should not be allowed to send a transaction
 		await expectThrow(project.member_initial_response(4, Vote.Confirm), {from: ac.member4})
@@ -132,6 +134,20 @@ contract('01_Project.sol', function(rpc_accounts) {
 
 		let project_status = await project.get_project_status();
 		assert.equal(project_status.toNumber(), Status.Confirmed);
+	})
+
+	it('should be able to compute the needed quorum to achieve resolution passing without using float data-type', async () => {
+
+		// we have 2 Silver token holders and the majority percentage is set to 60%
+
+		let res = await project.res_is_quorum_achieved(1);
+		assert.equal(res, false);
+
+		res = await project.res_is_quorum_achieved(2);
+		assert.equal(res, true);
+
+		let maj = await project.get_res_majority_member_count();
+		assert.equal(maj.toNumber(), 120);
 	})
 
 
