@@ -18,20 +18,32 @@ function log(_obj) {
 	console.log(JSON.stringify(_obj, null, 2));
 }
 
+const Status = {
+	None : 0,
+	Confirmed : 1,
+	Rejected : 2,
+	Suspended: 3,
+	Terminated : 4
+}
+
+const ResStatus = {
+	None: 0,
+	Created: 1,
+	Committed: 2,
+	Suspended: 3,
+	Cancelled: 4,
+	Expired: 5,
+	Passed: 6,
+	Rejected: 7,
+	Executing: 8,
+	Executed: 9
+}
+
 const TokenType = {
 	None : 0,
 	Silver : 1,
 	Copper : 2,
 	Sodium : 3
-}
-
-const Status = {
-	None : 0,
-	Created : 1,
-	Confirmed : 2,
-	Rejected : 3,
-	Paused: 4,
-	Terminated : 5
 }
 
 const Vote = {
@@ -58,6 +70,7 @@ module.exports = {
 	log: log,
 
 	Status: Status,
+	ResStatus: ResStatus,
+	TokenType: TokenType,
 	Vote: Vote,
-	TokenType: TokenType
 };

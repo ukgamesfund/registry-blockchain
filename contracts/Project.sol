@@ -234,6 +234,10 @@ contract Project is Ownable, ReentrancyGuard {
 		return uint8(project_status);
 	}
 
+	function get_silver_tokens_at(address _member, uint32 timestamp) public constant returns (int32 _tokens) {
+		return get_tokens(_member, TokenType.Silver, timestamp);
+	}
+
 	function get_silver_tokens(address _member) public constant returns (int32 _tokens) {
 		return get_tokens(_member, TokenType.Silver, uint32(now));
 	}
@@ -307,6 +311,16 @@ contract Project is Ownable, ReentrancyGuard {
 		return resolutions[res_id].status;
 	}
 
+	function get_checkpoint_idx(uint8 member_index, uint cp_index) constant
+	returns (uint32 _timestamp, int32 _silver, int32 _copper, int32 _sodium){
+		Checkpoint[] storage checkpoints = token_balances[member_index];
+		Checkpoint storage cp = checkpoints[cp_index];
+		_timestamp = cp.timestamp;
+		_silver = cp.silver;
+		_copper = cp.copper;
+		_sodium = cp.sodium;
+	}
+
 	//--------------------------------------- gold  functions --------------------------------------------------------
 
 	// this can be used by the GOLD account to pause and un-pause the project
@@ -362,6 +376,7 @@ contract Project is Ownable, ReentrancyGuard {
 
 		require(res_id < resolutions.length);
 		require(resolutions[res_id].status == ResStatus.Created);
+		require(res.transaction_counter < 0xff-1);
 
 		Resolution storage res = resolutions[res_id];
 		res.transactions[res.transaction_counter++] = tx_data;
@@ -594,17 +609,5 @@ contract Project is Ownable, ReentrancyGuard {
 		require(new_majority_percentage <= 100);
 
 		res_majority_percentage = new_majority_percentage;
-	}
-
-	//--------------------------------------- TEST functions --------------------------------------------------------
-
-	function test_get_checkpoint_idx(uint8 member_index, uint cp_index) constant
-	returns (uint32 _timestamp, int32 _silver, int32 _copper, int32 _sodium){
-		Checkpoint[] storage checkpoints = token_balances[member_index];
-		Checkpoint storage cp = checkpoints[cp_index];
-		_timestamp = cp.timestamp;
-		_silver = cp.silver;
-		_copper = cp.copper;
-		_sodium = cp.sodium;
 	}
 }
