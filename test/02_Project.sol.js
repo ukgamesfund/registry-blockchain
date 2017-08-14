@@ -10,7 +10,7 @@ import {
 }  from './common/common';
 
 let NameRegistry = artifacts.require('../contracts/NameRegistry.sol');
-let Project = artifacts.require('../contracts/Project.sol');
+let ProjectWrapper = artifacts.require('../contracts/ProjectWrapper.sol');
 
 let chai = require('chai');
 let assert = chai.assert;
@@ -41,7 +41,7 @@ contract('02_Project.sol', function(rpc_accounts) {
 		let silver = [11, 2, 0];
 		let copper = [4, 5, 23];
 
-		project = await Project.new(registry.address, VOTING_MAJ_PERCENTAGE, 'project2', members, silver, copper, {from: ac.member1})
+		project = await ProjectWrapper.new(registry.address, VOTING_MAJ_PERCENTAGE, 'project2', members, silver, copper, {from: ac.member1})
 	})
 
 	it('should not allow a member that doesn\'t hold Silver tokens to create a resolution', async () => {
@@ -89,8 +89,9 @@ contract('02_Project.sol', function(rpc_accounts) {
 		let details = await project.res_get_details(0);
 		assert.equal(details[8].toNumber(), 1); // transaction_counter
 
-		let tx_bytes = await project.res_get_transaction(0, 0);
-		assert.equal(tx1, tx_bytes);
+		let tx_bytes = await project.res_get_transaction_hash(0, 0);
+		let tx1_hash = web3.sha3(tx1, {encoding: 'hex'});
+		assert.equal(tx1_hash, tx_bytes);
 	})
 
 	it('should allow the initiator the Commit the resolution to voting', async () => {
@@ -103,10 +104,6 @@ contract('02_Project.sol', function(rpc_accounts) {
 		assert.equal(log0.args['status'], ResStatus.Committed);
 
 		let details = await project.res_get_details(0);
-
-		let silver_token_counter = await project.silver_token_counter();
-		let res_majority_percentage = await project.res_majority_percentage();
-
 		//["0","1502727870","1503332671","2","0","0","13","60","1"]
 		assert.equal(details[2].toNumber(), timestamp+CONST.SECONDS_7D); // expiry
 		assert.equal(details[3].toNumber(), ResStatus.Committed);

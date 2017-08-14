@@ -60,7 +60,7 @@ let CONST = {
 	SECONDS_7D: 86400*7,
 	SECONDS_1M: 86400*28,
 
-	GOLD_ACCOUNT: "gold.account",
+	GOLD_ACCOUNT: "ac.gold",
 }
 
 

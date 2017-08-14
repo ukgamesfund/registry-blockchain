@@ -8,11 +8,11 @@ import {
 	accounts, log,
 	CONST,
 	Status,
-	Vote,
+	Vote, TokenType
 }  from './common/common';
 
 let NameRegistry = artifacts.require('../contracts/NameRegistry.sol');
-let Project = artifacts.require('../contracts/Project.sol');
+let ProjectWrapper = artifacts.require('../contracts/ProjectWrapper.sol');
 
 let chai = require('chai');
 let assert = chai.assert;
@@ -53,7 +53,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		let silver = [11, 2, 0];
 		let copper = [4, 5, 23];
 
-		project = await Project.new(registry.address, VOTING_MAJ_PERCENTAGE, 'project1', members, silver, copper, {from: ac.member1})
+		project = await ProjectWrapper.new(registry.address, VOTING_MAJ_PERCENTAGE, 'project1', members, silver, copper, {from: ac.member1})
 
 		let project_name = await project.project_name();
 		assert.equal(project_name, 'project1');
@@ -64,20 +64,24 @@ contract('01_Project.sol', function(rpc_accounts) {
 		let silver_token_counter = await project.silver_token_counter();
 		assert.equal(silver_token_counter.toNumber(), 13);
 
+
+		let copper_token_counter = await project.copper_token_counter();
+		assert.equal(silver_token_counter.toNumber(), 13);
+
 		let initiator = await project.project_initiator();
 		assert.equal(initiator, ac.member1);
 
-		let m1_s = await project.get_silver_tokens(ac.member1);
-		let m1_c = await project.get_copper_tokens(ac.member1);
-		let m1_n = await project.get_sodium_tokens(ac.member1);
+		let m1_s = await project.get_tokens(ac.member1, TokenType.Silver, 0);
+		let m1_c = await project.get_tokens(ac.member1, TokenType.Copper, 0);
+		let m1_n = await project.get_tokens(ac.member1, TokenType.Sodium, 0);
 
 		assert.equal(m1_s.toNumber(), 11);
 		assert.equal(m1_c.toNumber(), 4);
 		assert.equal(m1_n.toNumber(), 0);
 
-		let m2_s = await project.get_silver_tokens(ac.member2);
-		let m2_c = await project.get_copper_tokens(ac.member2);
-		let m2_n = await project.get_sodium_tokens(ac.member2);
+		let m2_s = await project.get_tokens(ac.member2, TokenType.Silver, 0);
+		let m2_c = await project.get_tokens(ac.member2, TokenType.Copper, 0);
+		let m2_n = await project.get_tokens(ac.member2, TokenType.Sodium, 0);
 
 		assert.equal(m2_s.toNumber(), 2);
 		assert.equal(m2_c.toNumber(), 5);
@@ -87,7 +91,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 		assert.equal(res_majority_percentage.toNumber(), 60);
 
 		// querying for an un-existing member should throw
-		await expectThrow(project.get_silver_tokens(ac.member4));
+		await expectThrow(project.get_tokens(ac.member4, TokenType.Silver, 0));
 	})
 
 	it('should properly record member indexes', async () => {
