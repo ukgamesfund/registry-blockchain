@@ -306,11 +306,6 @@ contract Project is Ownable, ReentrancyGuard {
 		return checkpoints[min];
 	}
 
-	function get_resolution_status(uint res_id) public constant returns(ResStatus status) {
-		require(res_id < resolutions.length);
-		return resolutions[res_id].status;
-	}
-
 	function get_checkpoint_idx(uint8 member_index, uint cp_index) constant
 	returns (uint32 _timestamp, int32 _silver, int32 _copper, int32 _sodium){
 		Checkpoint[] storage checkpoints = token_balances[member_index];
@@ -319,6 +314,37 @@ contract Project is Ownable, ReentrancyGuard {
 		_silver = cp.silver;
 		_copper = cp.copper;
 		_sodium = cp.sodium;
+	}
+
+	function res_get_details(uint res_id) public constant returns(
+		uint8 initiator,
+		uint32 created,
+		uint32 expiry,
+		ResStatus status,
+		int32 silver_token_confirmations,
+		int32 silver_token_rejections,
+		int32 silver_token_total,
+		uint8 majority_percentage,
+		uint8 transaction_counter) {
+
+		require(res_id < resolutions.length);
+
+		Resolution storage res = resolutions[res_id];
+		initiator = res.initiator;
+		created = res.created;
+		expiry = res.expiry;
+		status = res.status;
+		silver_token_confirmations = res.silver_token_confirmations;
+		silver_token_rejections = res.silver_token_rejections;
+		silver_token_total = res.silver_token_total;
+		majority_percentage = res.majority_percentage;
+		transaction_counter = res.transaction_counter;
+	}
+
+	function res_get_transaction(uint32 res_id, uint8 tx_id) public constant returns (bytes) {
+		require(res_id < resolutions.length);
+		require(tx_id < resolutions[res_id].transaction_counter);
+		return resolutions[res_id].transactions[tx_id];
 	}
 
 	//--------------------------------------- gold  functions --------------------------------------------------------
@@ -356,7 +382,7 @@ contract Project is Ownable, ReentrancyGuard {
 			status: ResStatus.Created,
 			created: uint32(now),
 			expiry: 0,
-			silver_token_total:0,
+			silver_token_total: silver_token_counter,
 			silver_token_confirmations: 0,
 			silver_token_rejections: 0,
 			transaction_counter: 0,
@@ -376,7 +402,7 @@ contract Project is Ownable, ReentrancyGuard {
 
 		require(res_id < resolutions.length);
 		require(resolutions[res_id].status == ResStatus.Created);
-		require(res.transaction_counter < 0xff-1);
+		require(res.transaction_counter < 0xff);
 
 		Resolution storage res = resolutions[res_id];
 		res.transactions[res.transaction_counter++] = tx_data;

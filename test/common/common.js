@@ -57,6 +57,7 @@ let CONST = {
 	NOT_A_MEMBER: 0xff,
 
 	SECONDS_1D: 86400,
+	SECONDS_7D: 86400*7,
 	SECONDS_1M: 86400*28,
 
 	GOLD_ACCOUNT: "gold.account",
