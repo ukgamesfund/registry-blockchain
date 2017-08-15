@@ -18,7 +18,7 @@ contract ProjectWrapper is Ownable {
 	event LogProjectTerminated();
 
 	event LogResolutionChange(uint32 id, uint8 status);
-	event LogResolutionVote(uint32 id, uint8 vote);
+	event LogResolutionVote(uint32 id, uint8 member_index, uint8 vote);
 
 	function ProjectWrapper(
 		address _registry,
@@ -126,5 +126,13 @@ contract ProjectWrapper is Ownable {
 
 	function res_add_transaction(uint8 sender_index, uint32 res_id, bytes tx_data) public {
 		return project.res_add_transaction(sender_index, res_id, tx_data);
+	}
+
+	function res_vote_resolution(uint8 sender_index, uint32 res_id, Lib.Vote vote) public {
+		return project.res_vote_resolution(sender_index, res_id,  vote);
+	}
+
+	function res_execute_resolution(uint8 sender_index, uint32 res_id) public {
+		return project.res_execute_resolution(sender_index, res_id);
 	}
 }

@@ -13,7 +13,7 @@ library Lib {
 	event LogProjectTerminated();
 
 	event LogResolutionChange(uint32 id, uint8 status);
-	event LogResolutionVote(uint32 id, uint8 vote);
+	event LogResolutionVote(uint32 id, uint8 member_index, uint8 vote);
 
 	enum Status {
 		None,
@@ -477,8 +477,8 @@ library Lib {
 		require(res_id < self.resolutions.length);
 		require(self.resolutions[res_id].status == ResStatus.Committed);
 		require(
-			self.resolutions[res_id].expiry > 0 &&
-			self.resolutions[res_id].expiry < now
+			0 < self.resolutions[res_id].expiry &&
+			self.resolutions[res_id].expiry > now
 		);
 
 		Resolution storage res = self.resolutions[res_id];
@@ -501,6 +501,8 @@ library Lib {
 		if(vote == Vote.Reject) {
 			res.silver_token_rejections += cp.silver;
 		}
+
+		LogResolutionVote(res_id, sender_index, uint8(vote));
 
 		ResStatus result = res_get_passed_or_rejected(self, res_id);
 
@@ -530,6 +532,7 @@ library Lib {
 		}
 
 		res.status = ResStatus.Executed;
+		LogResolutionChange(res_id, uint8(res.status));
 	}
 
 	//--------------------------------------- Resolution executed functions -------------------------------------------
