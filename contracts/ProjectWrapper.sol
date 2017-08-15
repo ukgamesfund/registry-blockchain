@@ -153,4 +153,11 @@ contract ProjectWrapper is Ownable {
 
 		return project.res_convert_tokens(res_id, member_index, tokens_number, from_type, to_type);
 	}
+
+	function res_change_majority_percentage(
+		uint32 res_id,
+		uint8 new_majority_percentage) {
+
+		return project.res_change_majority_percentage(res_id, new_majority_percentage);
+	}
 }

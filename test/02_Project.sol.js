@@ -22,14 +22,9 @@ contract('02: Run workflow for a resolution with one transaction', function(rpc_
 	let registry;
 	let project;
 	let VOTING_MAJ_PERCENTAGE = 60;
-
-	let pGetBlock = Promise.promisify(web3.eth.getBlock);
-	let pSendTransaction = Promise.promisify(web3.eth.sendTransaction);
-	let pGetTransactionReceipt = Promise.promisify(web3.eth.getTransactionReceipt);
-	let pGetTransaction = Promise.promisify(web3.eth.getTransaction);
-
 	let res0_member1_silver = 5;
 
+	let pGetBlock = Promise.promisify(web3.eth.getBlock);
 	async function pGetLatestTimestamp() {
 		let _block = await pGetBlock('latest')
 		return Promise.resolve(parseInt(_block.timestamp));
@@ -191,6 +186,8 @@ contract('02: Run workflow for a resolution with one transaction', function(rpc_
 
 	it('should allow any Silver token holder to execute a passed resolution', async () => {
 
+		let silver_before = await project.silver_token_counter();
+
 		let m1_s_before = await project.get_tokens(ac.member1, TokenType.Silver, 0);
 		assert.notEqual(m1_s_before.toNumber(), res0_member1_silver);
 
@@ -204,5 +201,12 @@ contract('02: Run workflow for a resolution with one transaction', function(rpc_
 
 		let m1_s_after = await project.get_tokens(ac.member1, TokenType.Silver, 0);
 		assert.equal(m1_s_after.toNumber(), res0_member1_silver);
+
+		let ts_before = await pGetLatestTimestamp() - 1;
+		let m1_s_before_by_ts = await project.get_tokens(ac.member1, TokenType.Silver, ts_before);
+		assert.equal(m1_s_before.toNumber(), m1_s_before_by_ts.toNumber());
+
+		let silver_after = await project.silver_token_counter();
+		assert.equal(silver_before.toNumber(), silver_after.toNumber()+(11-res0_member1_silver));
 	})
 });

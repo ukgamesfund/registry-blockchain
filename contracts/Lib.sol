@@ -608,10 +608,12 @@ library Lib {
 		cp.timestamp = uint32(now);
 
 		if(from_type == TokenType.Silver) {
+			require(cp.silver >= tokens_number);
 			self.silver_token_counter -= tokens_number;
 			cp.silver -= tokens_number;
 		}
 		else {
+			require(cp.copper >= tokens_number);
 			self.copper_token_counter -= tokens_number;
 			cp.copper -= tokens_number;
 		}
