@@ -17,7 +17,7 @@ let ProjectWrapper = artifacts.require('../contracts/ProjectWrapper.sol');
 let chai = require('chai');
 let assert = chai.assert;
 
-contract('01_Project.sol', function(rpc_accounts) {
+contract('01: Create a project and check initial setup for all variables', function(rpc_accounts) {
 
 	let ac = accounts(rpc_accounts);
 
@@ -66,7 +66,7 @@ contract('01_Project.sol', function(rpc_accounts) {
 
 
 		let copper_token_counter = await project.copper_token_counter();
-		assert.equal(silver_token_counter.toNumber(), 13);
+		assert.equal(copper_token_counter.toNumber(), 32);
 
 		let initiator = await project.project_initiator();
 		assert.equal(initiator, ac.member1);

@@ -15,7 +15,7 @@ let ProjectWrapper = artifacts.require('../contracts/ProjectWrapper.sol');
 let chai = require('chai');
 let assert = chai.assert;
 
-contract('02_Project.sol', function(rpc_accounts) {
+contract('02: Run workflow for a resolution with one transaction', function(rpc_accounts) {
 
 	let ac = accounts(rpc_accounts);
 

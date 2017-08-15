@@ -120,10 +120,6 @@ contract ProjectWrapper is Ownable {
 		return project.res_commit_resolution(sender_index, res_id);
 	}
 
-	function res_set_token_value(uint32 res_id, uint8 member_index, Lib.TokenType token_type, int32 tokens_number) public {
-		return project.res_set_token_value(res_id, member_index, token_type, tokens_number);
-	}
-
 	function res_add_transaction(uint8 sender_index, uint32 res_id, bytes tx_data) public {
 		return project.res_add_transaction(sender_index, res_id, tx_data);
 	}
@@ -134,5 +130,27 @@ contract ProjectWrapper is Ownable {
 
 	function res_execute_resolution(uint8 sender_index, uint32 res_id) public {
 		return project.res_execute_resolution(sender_index, res_id);
+	}
+
+	// resolution functions
+
+
+	function res_set_token_value(
+		uint32 res_id,
+		uint8 member_index,
+		Lib.TokenType token_type,
+		int32 tokens_number) public {
+
+		return project.res_set_token_value(res_id, member_index, token_type, tokens_number);
+	}
+
+	function res_convert_tokens(
+		uint32 res_id,
+		uint8 member_index,
+		int32 tokens_number,
+		Lib.TokenType from_type,
+		Lib.TokenType to_type) public {
+
+		return project.res_convert_tokens(res_id, member_index, tokens_number, from_type, to_type);
 	}
 }
